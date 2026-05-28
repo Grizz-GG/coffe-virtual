@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kopi Virtual Gyro</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0e6d2;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #4a2c11;
+            margin-bottom: 5px;
+            font-size: 1.5rem;
+        }
+
+        p {
+            color: #6f4e37;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        /* Wadah Cangkir untuk Efek 3D */
+        .scene {
+            width: 200px;
+            height: 200px;
+            perspective: 600px;
+        }
+
+        /* Cangkir Kopi */
+        .cup {
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.15), inset 0 0 20px rgba(0,0,0,0.1);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+            border: 8px solid #e6e6e6;
+            box-sizing: border-box;
+        }
+
+        /* Cairan Kopi di Dalam Cangkir */
+        .coffee {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, #5c3a21 0%, #362213 100%);
+            border-radius: 50%;
+            transition: transform 0.1s ease-out;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        /* Efek Busah/Krim Kopi */
+        .coffee::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 25%;
+            width: 30%;
+            height: 20%;
+            background: rgba(245, 222, 179, 0.4);
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+
+        /* Tombol Izin Gyro (Penting untuk iOS/Android beberapa versi) */
+        .btn {
+            margin-top: 30px;
+            padding: 12px 24px;
+            background-color: #6f4e37;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .btn:active {
+            background-color: #4a2c11;
+        }
+
+        /* Indikator Sensor */
+        #status {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Kopi Virtual Gyro</h1>
+    <p>Miringkan HP kamu untuk melihat pergerakan kopi!</p>
+
+    <div class="scene">
+        <div class="cup" id="cup">
+            <div class="coffee" id="coffee"></div>
+        </div>
+    </div>
+
+    <button class="btn" id="requestBtn">Aktifkan Sensor</button>
+    <div id="status">Sensor belum aktif</div>
+
+    <script>
+        const cup = document.getElementById('cup');
+        const coffee = document.getElementById('coffee');
+        const requestBtn = document.getElementById('requestBtn');
+        const statusDiv = document.getElementById('status');
+
+        // Fungsi untuk menangani perubahan orientasi (Gyro)
+        function handleOrientation(event) {
+            // Gamma: Kiri-Kanan (-90 sampai 90)
+            // Beta: Depan-Belakang (-180 sampai 180)
+            let tiltX = event.gamma; 
+            let tiltY = event.beta;  
+
+            // Batasi pergerakan agar tidak terlalu ekstrem
+            tiltX = Math.max(-45, Math.min(45, tiltX));
+            tiltY = Math.max(-45, Math.min(45, tiltY));
+
+            // Gerakkan cangkir (efek 3D)
+            cup.style.transform = `rotateX(${tiltY}deg) rotateY(${tiltX}deg)`;
+
+            // Gerakkan cairan kopi ke arah berlawanan agar terlihat realistis (efek inersia cairan)
+            let moveX = -(tiltX * 0.5);
+            let moveY = -(tiltY * 0.5);
+            coffee.style.transform = `translate(${moveX}px, ${moveY}px) scale(0.95)`;
+            
+            statusDiv.innerText = `X: ${Math.round(tiltX)}° | Y: ${Math.round(tiltY)}°`;
+        }
+
+        // Fungsi untuk meminta izin sensor (Sangat penting untuk iOS 13+ dan browser modern)
+        function tingkatkanIzin() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                // Khusus iOS
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            requestBtn.style.display = 'none';
+                            statusDiv.innerText = "Sensor Aktif!";
+                        } else {
+                            statusDiv.innerText = "Izin sensor ditolak.";
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Untuk Android / Browser Desktop yang mendukung
+                window.addEventListener('deviceorientation', handleOrientation);
+                requestBtn.style.display = 'none';
+                statusDiv.innerText = "Sensor Aktif!";
+            }
+        }
+
+        requestBtn.addEventListener('click', tingkatkanIzin);
+    </script>
+</body>
+</html>
